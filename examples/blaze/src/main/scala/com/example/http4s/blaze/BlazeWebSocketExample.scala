@@ -23,10 +23,13 @@ object BlazeWebSocketExample extends ServerApp {
       Ok("Hello world.")
 
     case req@ GET -> Root / "ws" =>
-      val src = awakeEvery(1.seconds)(Strategy.DefaultStrategy, DefaultScheduler).map{ d => Text(s"Ping! $d") }
+      val src = awakeEvery(1.seconds)(Strategy.DefaultStrategy, DefaultScheduler).map(d => Text(s"Ping! $d"))
       val sink: Sink[Task, WebSocketFrame] = Process.constant {
-        case Text(t, _) => Task.delay( println(t))
-        case f       => Task.delay(println(s"Unknown type: $f"))
+        case Text(t, _)      => Task.delay(println(s"Got text message: $t"))
+        case Binary(b, _)    => Task.delay(println(s"Got binary message: ${b.toList}"))
+        case c: Continuation => ???
+          // Unreachable case when this service is mounted with BlazeBuilder
+          // which takes case of aggregating continuation frames.
       }
       WS(Exchange(src, sink))
 
